@@ -6,11 +6,11 @@ import type { IdentifyResult, Language, Candidate } from '@/lib/types';
 import type { TranslationKeys } from '@/translations';
 import { AnimeHero } from './AnimeHero';
 import { AnimeStats } from './AnimeStats';
-import { VideoPreview } from './VideoPreview';
 import { NewsSection } from './NewsSection';
 import { StreamingLinks } from './StreamingLinks';
 import { CharacterList } from './CharacterList';
 import { CandidatesList } from './CandidatesList';
+import { EpisodeInfo } from './EpisodeInfo';
 
 interface ResultCardProps {
     result: IdentifyResult;
@@ -73,9 +73,6 @@ export function ResultCard({ result, language, text, onReset, uploadedImage, onS
                             />
                         </section>
 
-                        {/* Video Preview */}
-                        {result.video && <VideoPreview videoUrl={result.video} text={text} trailer={result.anilist.trailer} />}
-
                         {/* Character List */}
                         {result.anilist.characters && result.anilist.characters.length > 0 && (
                             <CharacterList characters={result.anilist.characters} text={text} />
@@ -88,6 +85,9 @@ export function ResultCard({ result, language, text, onReset, uploadedImage, onS
                         {result.anilist.news && result.anilist.news.length > 0 && (
                             <NewsSection news={result.anilist.news} text={text} />
                         )}
+
+                        {/* Episode-Specific Information */}
+                        <EpisodeInfo result={result} text={text} />
 
                         {/* Candidates List */}
                         {otherCandidates.length > 0 && onSelectCandidate && (

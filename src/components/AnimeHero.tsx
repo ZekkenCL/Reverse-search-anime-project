@@ -116,17 +116,6 @@ export function AnimeHero({ result, text, uploadedImage }: AnimeHeroProps) {
                     <p className="text-lg text-neutral-400 mt-1 font-medium">
                         {result.anilist.title?.native}
                     </p>
-                    <div className="flex flex-wrap gap-2 mt-4">
-                        <div className="px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-400 border border-green-500/20 backdrop-blur-md">
-                            {(result.similarity * 100).toFixed(1)}% {text.match}
-                        </div>
-                        <div className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 backdrop-blur-md">
-                            {text.episode} {result.episode}
-                        </div>
-                        <div className="px-3 py-1 rounded-full text-xs font-bold bg-white/5 text-neutral-300 border border-white/10 backdrop-blur-md">
-                            {formatTime(result.from)}
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

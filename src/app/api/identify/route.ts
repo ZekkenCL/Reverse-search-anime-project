@@ -200,11 +200,73 @@ export async function POST(req: NextRequest) {
         const anilistData = await anilistResponse.json();
         const media = anilistData.data?.Media;
 
+        // ===================================================================
+        // Find the main/first series in the franchise EARLY
+        // ===================================================================
+        let mainSeries = media;
+        let matchedSeason = media;
+        let seasonNumber = 1;
+
+        // Get all related media from the franchise
+        const mediaRelations = media.relations?.edges || [];
+        const allRelatedForMain: any[] = [media];
+        const mainProcessedIds = new Set([media.id]);
+
+        // Process all relations recursively
+        mediaRelations.forEach((edge: any) => {
+            const relatedMedia = edge.node;
+            if (!mainProcessedIds.has(relatedMedia.id)) {
+                allRelatedForMain.push(relatedMedia);
+                mainProcessedIds.add(relatedMedia.id);
+
+                // Process nested relations
+                const nestedRelations = relatedMedia.relations?.edges || [];
+                nestedRelations.forEach((nestedEdge: any) => {
+                    const nestedMedia = nestedEdge.node;
+                    if (!mainProcessedIds.has(nestedMedia.id)) {
+                        allRelatedForMain.push(nestedMedia);
+                        mainProcessedIds.add(nestedMedia.id);
+                    }
+                });
+            }
+        });
+
+        // Filter to only TV/ONA series (not movies, specials, PVs, etc.)
+        const tvSeries = allRelatedForMain.filter((m: any) => {
+            if (!['TV', 'TV_SHORT', 'ONA'].includes(m.format)) return false;
+            if (m.type !== 'ANIME') return false;
+            const title = (m.title?.english || m.title?.romaji || '').toLowerCase();
+            if (title.includes(' pv') || title.includes('promotional') || title.includes('cm')) return false;
+            if (!m.episodes || m.episodes === 0) return false;
+            return true;
+        });
+
+        // Sort by start date to find the earliest (main series)
+        tvSeries.sort((a: any, b: any) => {
+            const aDate = a.startDate;
+            const bDate = b.startDate;
+            if (!aDate?.year) return 1;
+            if (!bDate?.year) return -1;
+            if (aDate.year !== bDate.year) return aDate.year - bDate.year;
+            if (aDate.month !== bDate.month) return (aDate.month || 0) - (bDate.month || 0);
+            return (aDate.day || 0) - (bDate.day || 0);
+        });
+
+        // The first one (earliest) is the main series
+        if (tvSeries.length > 0) {
+            mainSeries = tvSeries[0];
+            const matchedIndex = tvSeries.findIndex((s: any) => s.id === media.id);
+            if (matchedIndex !== -1) {
+                seasonNumber = matchedIndex + 1;
+            }
+        }
+        matchedSeason = media;
+
         // Calculate season and movie counts from relations
         let seasonCount = 0;
         let movieCount = 0;
-        let grandTotalEpisodes = media.episodes || 0;
-        let generalDescription = media.description;
+        let grandTotalEpisodes = mainSeries.episodes || 0;
+        let generalDescription = mainSeries.description; // Use main series description!
 
         // Helper to convert date object to comparable number
         const getDateValue = (dateObj: any) => {
@@ -212,13 +274,13 @@ export async function POST(req: NextRequest) {
             return dateObj.year * 10000 + (dateObj.month || 0) * 100 + (dateObj.day || 0);
         };
 
-        let earliestDate = getDateValue(media.startDate);
+        let earliestDate = getDateValue(mainSeries.startDate);
         const processedIds = new Set<number>();
-        processedIds.add(media.id);
+        processedIds.add(mainSeries.id);
 
         // Calculate Franchise Status
         // Priority: RELEASING > NOT_YET_RELEASED > FINISHED/CANCELLED/etc
-        let franchiseStatus = media.status;
+        let franchiseStatus = mainSeries.status;
 
         // Helper to process a node
         const processNode = (node: any) => {
@@ -243,8 +305,8 @@ export async function POST(req: NextRequest) {
             return ['PREQUEL', 'SEQUEL', 'PARENT', 'SIDE_STORY'].includes(relationType);
         };
 
-        if (media?.relations?.edges) {
-            const relations = media.relations.edges;
+        if (mainSeries?.relations?.edges) {
+            const relations = mainSeries.relations.edges;
 
             // 1. Process direct relations
             for (const edge of relations) {
@@ -263,9 +325,9 @@ export async function POST(req: NextRequest) {
             }
 
             // Add self to counts if applicable (already added episodes to grandTotal, just need to increment count types)
-            if (media.format === 'TV' || media.format === 'TV_SHORT' || media.format === 'ONA') {
+            if (mainSeries.format === 'TV' || mainSeries.format === 'TV_SHORT' || mainSeries.format === 'ONA') {
                 seasonCount++; // Count self
-            } else if (media.format === 'MOVIE') {
+            } else if (mainSeries.format === 'MOVIE') {
                 movieCount++; // Count self
             }
 
@@ -306,7 +368,7 @@ export async function POST(req: NextRequest) {
                 if (status === 'NOT_YET_RELEASED') hasNotYetReleased = true;
             };
 
-            if (media.status) checkStatus(media.status);
+            if (mainSeries.status) checkStatus(mainSeries.status);
 
             for (const edge of relations) {
                 if (edge.node.type === 'ANIME' && isRelevantRelation(edge.relationType)) {
@@ -326,21 +388,21 @@ export async function POST(req: NextRequest) {
             } else if (hasNotYetReleased) {
                 franchiseStatus = 'NOT_YET_RELEASED';
             } else if (franchiseStatus !== 'CANCELLED') {
-                if (media.status === 'FINISHED') franchiseStatus = 'FINISHED';
+                if (mainSeries.status === 'FINISHED') franchiseStatus = 'FINISHED';
             }
         } else {
             // No relations, just set counts based on self
-            if (media.format === 'TV' || media.format === 'TV_SHORT' || media.format === 'ONA') seasonCount = 1;
-            if (media.format === 'MOVIE') movieCount = 1;
+            if (mainSeries.format === 'TV' || mainSeries.format === 'TV_SHORT' || mainSeries.format === 'ONA') seasonCount = 1;
+            if (mainSeries.format === 'MOVIE') movieCount = 1;
         }
 
         // Step 2.5: Fetch News from Jikan API and Anime News Network
         let news: any[] = [];
 
         // 1. Fetch from Jikan (MyAnimeList)
-        if (media.idMal) {
+        if (mainSeries.idMal) {
             try {
-                const jikanResponse = await fetch(`https://api.jikan.moe/v4/anime/${media.idMal}/news`);
+                const jikanResponse = await fetch(`https://api.jikan.moe/v4/anime/${mainSeries.idMal}/news`);
                 if (jikanResponse.ok) {
                     const jikanData = await jikanResponse.json();
                     const jikanNews = jikanData.data || [];
@@ -366,9 +428,9 @@ export async function POST(req: NextRequest) {
 
                 // Filter ANN news by anime title
                 const titles = [
-                    media.title.english,
-                    media.title.romaji,
-                    media.title.native
+                    mainSeries.title.english,
+                    mainSeries.title.romaji,
+                    mainSeries.title.native
                 ].filter(Boolean).map(t => t.toLowerCase());
 
                 const relevantAnnNews = annNews.filter(item => {
@@ -401,9 +463,9 @@ export async function POST(req: NextRequest) {
 
                 // Filter Crunchyroll news by anime title
                 const titles = [
-                    media.title.english,
-                    media.title.romaji,
-                    media.title.native
+                    mainSeries.title.english,
+                    mainSeries.title.romaji,
+                    mainSeries.title.native
                 ].filter(Boolean).map(t => t.toLowerCase());
 
                 const relevantCrNews = crNews.filter(item => {
@@ -436,9 +498,9 @@ export async function POST(req: NextRequest) {
 
                 // Filter Anime Corner news by anime title
                 const titles = [
-                    media.title.english,
-                    media.title.romaji,
-                    media.title.native
+                    mainSeries.title.english,
+                    mainSeries.title.romaji,
+                    mainSeries.title.native
                 ].filter(Boolean).map(t => t.toLowerCase());
 
                 const relevantAcNews = acNews.filter(item => {
@@ -523,15 +585,21 @@ export async function POST(req: NextRequest) {
             to: bestMatch.to,
             video: bestMatch.video,
             image: bestMatch.image,
+            matchedSeasonNumber: seasonNumber,
+            matchedSeasonTitle: matchedSeason.title,
             anilist: {
-                ...media,
-                status: franchiseStatus || media.status, // Override status with franchise status
+                ...mainSeries, // Use main series for general info
+                // Preserve these from original media since relations don't have full data
+                coverImage: media.coverImage,
+                externalLinks: media.externalLinks,
+                bannerImage: media.bannerImage,
+                status: franchiseStatus || mainSeries.status,
                 seasonCount,
                 movieCount,
-                episodes: grandTotalEpisodes, // Override with grand total
+                episodes: grandTotalEpisodes,
                 news,
-                trailer: media.trailer,
-                characters: media.characters?.edges?.map((edge: any) => ({
+                trailer: mainSeries.trailer,
+                characters: mainSeries.characters?.edges?.map((edge: any) => ({
                     id: edge.node.id,
                     name: edge.node.name,
                     image: edge.node.image,

@@ -40,6 +40,9 @@ export const translations = {
         seasons: 'Temporadas',
         movies: 'Películas',
         hasMovies: 'Tiene Películas',
+        charactersAndVoiceActors: 'Personajes y Actores de Voz',
+        japanese: 'Japonés',
+        notRightAnime: '¿No es el anime correcto?',
     },
     en: {
         title: 'Find that Anime',
@@ -77,6 +80,9 @@ export const translations = {
         seasons: 'Seasons',
         movies: 'Movies',
         hasMovies: 'Has Movies',
+        charactersAndVoiceActors: 'Characters & Voice Actors',
+        japanese: 'Japanese',
+        notRightAnime: 'Not the right anime?',
     },
 } as const;
 

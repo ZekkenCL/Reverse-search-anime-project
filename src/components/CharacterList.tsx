@@ -17,7 +17,7 @@ export function CharacterList({ characters, text }: CharacterListProps) {
         <section className="space-y-4">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <Users className="w-5 h-5 text-indigo-400" />
-                Characters & Voice Actors
+                {text.charactersAndVoiceActors}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {characters.map((char) => (
@@ -49,7 +49,7 @@ export function CharacterList({ characters, text }: CharacterListProps) {
                             <div className="flex items-center gap-3 text-right">
                                 <div>
                                     <p className="text-sm font-medium text-white">{char.voiceActors[0].name.full}</p>
-                                    <p className="text-xs text-neutral-400">Japanese</p>
+                                    <p className="text-xs text-neutral-400">{text.japanese}</p>
                                 </div>
                                 <div className="relative w-12 h-12 rounded-full overflow-hidden border border-white/10">
                                     {char.voiceActors[0].image?.large && (

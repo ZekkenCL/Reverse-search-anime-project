@@ -21,7 +21,7 @@ export function CandidatesList({ candidates, onSelect, text }: CandidatesListPro
         <section className="space-y-4 pt-8 border-t border-white/10">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <HelpCircle className="w-5 h-5 text-yellow-400" />
-                Not the right anime?
+                {text.notRightAnime}
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {candidates.map((candidate, index) => (

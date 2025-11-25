@@ -111,6 +111,12 @@ export interface IdentifyResult {
     filename?: string;
     anilist: AnilistMedia | null;
     candidates?: Candidate[];
+    matchedSeasonNumber?: number;
+    matchedSeasonTitle?: {
+        english: string;
+        romaji: string;
+        native: string;
+    };
 }
 
 export interface Candidate {
