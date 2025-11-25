@@ -86,6 +86,35 @@ export async function POST(req: NextRequest) {
           trending
           popularity
           averageScore
+          trailer {
+            id
+            site
+            thumbnail
+          }
+          characters(sort: [ROLE, RELEVANCE], perPage: 6) {
+            edges {
+              node {
+                id
+                name {
+                  full
+                }
+                image {
+                  large
+                }
+              }
+              role
+              voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) {
+                id
+                name {
+                  full
+                }
+                image {
+                  large
+                }
+                languageV2
+              }
+            }
+          }
           relations {
             edges {
               node {
@@ -468,6 +497,14 @@ export async function POST(req: NextRequest) {
                 movieCount,
                 episodes: grandTotalEpisodes, // Override with grand total
                 news,
+                trailer: media.trailer,
+                characters: media.characters?.edges?.map((edge: any) => ({
+                    id: edge.node.id,
+                    name: edge.node.name,
+                    image: edge.node.image,
+                    role: edge.role,
+                    voiceActors: edge.voiceActors
+                })) || [],
                 description: {
                     en: descriptionEN,
                     es: descriptionES

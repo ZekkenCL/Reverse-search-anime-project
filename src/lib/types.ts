@@ -38,6 +38,33 @@ export interface AnilistMedia {
     seasonCount: number;
     movieCount: number;
     news?: AnimeNews[];
+    trailer?: {
+        id: string;
+        site: string;
+        thumbnail: string;
+    } | null;
+    characters?: Character[];
+}
+
+export interface Character {
+    id: number;
+    name: {
+        full: string;
+    };
+    image: {
+        large: string;
+    };
+    role: string;
+    voiceActors: {
+        id: number;
+        name: {
+            full: string;
+        };
+        image: {
+            large: string;
+        };
+        languageV2: string;
+    }[];
 }
 
 /**

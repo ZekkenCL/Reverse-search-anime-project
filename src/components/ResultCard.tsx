@@ -9,6 +9,7 @@ import { AnimeStats } from './AnimeStats';
 import { VideoPreview } from './VideoPreview';
 import { NewsSection } from './NewsSection';
 import { StreamingLinks } from './StreamingLinks';
+import { CharacterList } from './CharacterList';
 
 interface ResultCardProps {
     result: IdentifyResult;
@@ -68,7 +69,12 @@ export function ResultCard({ result, language, text, onReset, uploadedImage }: R
                         </section>
 
                         {/* Video Preview */}
-                        <VideoPreview videoUrl={result.video} text={text} />
+                        <VideoPreview videoUrl={result.video} text={text} trailer={result.anilist.trailer} />
+
+                        {/* Character List */}
+                        {result.anilist.characters && result.anilist.characters.length > 0 && (
+                            <CharacterList characters={result.anilist.characters} text={text} />
+                        )}
 
                         {/* Details Section */}
                         <AnimeStats result={result} text={text} />

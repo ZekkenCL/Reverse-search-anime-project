@@ -7,6 +7,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import type { IdentifyResult } from '@/lib/types';
 import type { TranslationKeys } from '@/translations';
 import { formatTime } from '@/lib/utils';
+import { ShareButton } from './ShareButton';
 
 interface AnimeHeroProps {
     result: IdentifyResult;
@@ -93,9 +94,29 @@ export function AnimeHero({ result, text, uploadedImage }: AnimeHeroProps) {
                     </motion.div>
                 </div>
 
-                {/* Title Info */}
-                <div className="flex-1 space-y-4 mb-2">
-                    <div className="flex flex-wrap gap-2">
+                {/* Title & Metadata */}
+                <div className="flex-1 text-white pb-2 relative z-10">
+                    <div className="flex items-start justify-between gap-4">
+                        <motion.h2
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-3xl md:text-5xl font-bold leading-tight mb-2"
+                        >
+                            {result.anilist.title?.english || result.anilist.title?.romaji || 'Unknown Title'}
+                        </motion.h2>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.4 }}
+                        >
+                            <ShareButton result={result} />
+                        </motion.div>
+                    </div>
+                    <p className="text-lg text-neutral-400 mt-1 font-medium">
+                        {result.anilist.title?.native}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-4">
                         <div className="px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-400 border border-green-500/20 backdrop-blur-md">
                             {(result.similarity * 100).toFixed(1)}% {text.match}
                         </div>
@@ -105,15 +126,6 @@ export function AnimeHero({ result, text, uploadedImage }: AnimeHeroProps) {
                         <div className="px-3 py-1 rounded-full text-xs font-bold bg-white/5 text-neutral-300 border border-white/10 backdrop-blur-md">
                             {formatTime(result.from)}
                         </div>
-                    </div>
-
-                    <div>
-                        <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight">
-                            {result.anilist.title?.english || result.anilist.title?.romaji || 'Unknown Title'}
-                        </h2>
-                        <p className="text-lg text-neutral-400 mt-1 font-medium">
-                            {result.anilist.title?.native}
-                        </p>
                     </div>
                 </div>
             </div>
