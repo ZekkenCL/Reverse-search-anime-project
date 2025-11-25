@@ -20,9 +20,9 @@ export function NewsSection({ news, text }: NewsSectionProps) {
                 {text.news}
             </h3>
             <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                {news.map((item) => (
+                {news.map((item, index) => (
                     <a
-                        key={item.mal_id}
+                        key={`${item.mal_id}-${index}`}
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"

@@ -61,5 +61,6 @@ export function useAnimeIdentifier() {
         identify,
         reset,
         setError,
+        setResult,
     };
 }

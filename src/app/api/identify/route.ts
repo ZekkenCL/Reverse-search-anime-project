@@ -41,13 +41,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ found: false });
         }
 
-        // Get the best match (highest similarity)
-        const bestMatch = traceData.result[0];
+        // Get top 5 matches
+        const topMatches = traceData.result.slice(0, 5);
+        const bestMatch = topMatches[0];
         const anilistId = bestMatch.anilist;
+
+        // Collect IDs for candidates query
+        const candidateIds = topMatches.map((m: any) => m.anilist);
 
         // Step 2: Query Anilist GraphQL API for detailed anime metadata
         const query = `
-      query ($id: Int) {
+      query ($id: Int, $ids: [Int]) {
         Media (id: $id, type: ANIME) {
           id
           idMal
@@ -160,6 +164,20 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+        # Fetch candidates metadata
+        Page(page: 1, perPage: 5) {
+            media(id_in: $ids, type: ANIME) {
+                id
+                title {
+                    english
+                    romaji
+                    native
+                }
+                coverImage {
+                    large
+                }
+            }
+        }
       }
     `;
 
@@ -171,7 +189,7 @@ export async function POST(req: NextRequest) {
             },
             body: JSON.stringify({
                 query,
-                variables: { id: anilistId },
+                variables: { id: anilistId, ids: candidateIds },
             }),
         });
 
@@ -481,6 +499,21 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const candidatesMedia = anilistData.data?.Page?.media || [];
+
+        // Map candidates with their trace info
+        const candidates = topMatches.map((match: any) => {
+            const mediaInfo = candidatesMedia.find((m: any) => m.id === match.anilist);
+            if (!mediaInfo) return null;
+            return {
+                id: mediaInfo.id,
+                similarity: match.similarity,
+                episode: match.episode,
+                title: mediaInfo.title,
+                coverImage: mediaInfo.coverImage
+            };
+        }).filter(Boolean);
+
         // Return combined results
         return NextResponse.json({
             found: true,
@@ -510,6 +543,7 @@ export async function POST(req: NextRequest) {
                     es: descriptionES
                 }
             },
+            candidates
         });
 
     } catch (error: any) {

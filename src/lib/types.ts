@@ -110,6 +110,21 @@ export interface IdentifyResult {
     image: string;
     filename?: string;
     anilist: AnilistMedia | null;
+    candidates?: Candidate[];
+}
+
+export interface Candidate {
+    id: number; // Anilist ID
+    similarity: number;
+    episode: number | null;
+    title: {
+        english: string;
+        romaji: string;
+        native: string;
+    };
+    coverImage: {
+        large: string;
+    };
 }
 
 /**

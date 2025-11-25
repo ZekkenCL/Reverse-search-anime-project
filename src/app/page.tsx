@@ -12,7 +12,7 @@ import { SearchHistory } from '@/components/SearchHistory';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ErrorToast } from '@/components/ErrorToast';
 import { getTranslations } from '@/translations';
-import type { Language, IdentifyResult } from '@/lib/types';
+import type { Language, IdentifyResult, Candidate } from '@/lib/types';
 
 /**
  * Home page - Anime Reverse Search
@@ -23,7 +23,7 @@ export default function Home() {
   const [preview, setPreview] = useState<string | null>(null);
   const [language, setLanguage] = useState<Language>('es');
   const [history, setHistory] = useState<IdentifyResult[]>([]);
-  const { loading, result, error, identify, reset, setError } = useAnimeIdentifier();
+  const { loading, result, error, identify, reset, setError, setResult } = useAnimeIdentifier();
 
   const text = getTranslations(language);
 
@@ -72,26 +72,48 @@ export default function Home() {
   };
 
   const handleSelectHistory = (item: IdentifyResult) => {
-    // We can't easily restore the "preview" blob URL from history, 
-    // so we might just show the result without the comparison feature enabled for history items
-    // or use the cover image as a fallback preview if needed.
-    // For now, we just set the result manually.
-    // Note: useAnimeIdentifier doesn't expose a setResult, so we might need to refactor or just ignore this limitation for now.
-    // Ideally, we should refactor useAnimeIdentifier to allow setting result externally, 
-    // but for this task scope, let's assume we can't easily do that without modifying the hook.
-    // Wait, I can't set the result because it comes from the hook.
-    // I need to modify the hook or just pass the history item to a state that overrides the hook's result.
-    // Let's try a simpler approach: if history item is selected, we just render it.
-    // But `result` comes from the hook. 
-    // I will skip implementing "Select History" fully correctly in this step because it requires hook refactoring.
-    // I will just implement the UI and saving for now, and maybe a simple alert or log.
-    // Actually, I can just not implement the "onSelect" fully or make it a TODO.
-    // OR, I can modify the hook quickly. Let's check the hook file first? No, I should stick to the plan.
-    // I'll implement the UI and saving. For selection, I'll just console log for now or try to set it if I can.
-    // Wait, I can't set `result` from here. 
-    // I will just leave onSelect empty for now or show a toast "History selection not implemented yet".
-    // actually, let's just not pass onSelect logic that does anything complex yet.
+    // For now, we just log it as we need to refactor hook to support setting result
     console.log('Selected history item:', item);
+    // In a real implementation, we would set the result state here
+    if (setResult) {
+      setResult(item);
+    }
+  };
+
+  const handleCandidateSelect = async (candidate: Candidate) => {
+    if (!result) return;
+
+    // Show loading state (optional - could set a local loading state)
+    try {
+      const response = await fetch('/api/details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          anilistId: candidate.id,
+          episode: candidate.episode,
+          from: result.from,
+          to: result.to,
+          video: result.video,
+          image: result.image,
+          similarity: candidate.similarity
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch details');
+      }
+
+      const fullDetails = await response.json();
+
+      if (setResult) {
+        setResult(fullDetails);
+      }
+    } catch (error) {
+      console.error('Error fetching candidate details:', error);
+      setError('Failed to load anime details');
+    }
   };
 
   return (
@@ -161,6 +183,7 @@ export default function Home() {
                 text={text}
                 onReset={handleReset}
                 uploadedImage={preview}
+                onSelectCandidate={handleCandidateSelect}
               />
             )}
           </AnimatePresence>
@@ -180,8 +203,8 @@ export default function Home() {
             text={text}
           />
         )}
+
       </div>
     </main>
   );
 }
-

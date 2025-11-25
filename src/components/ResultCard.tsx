@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { X, Info } from 'lucide-react';
-import type { IdentifyResult, Language } from '@/lib/types';
+import type { IdentifyResult, Language, Candidate } from '@/lib/types';
 import type { TranslationKeys } from '@/translations';
 import { AnimeHero } from './AnimeHero';
 import { AnimeStats } from './AnimeStats';
@@ -10,6 +10,7 @@ import { VideoPreview } from './VideoPreview';
 import { NewsSection } from './NewsSection';
 import { StreamingLinks } from './StreamingLinks';
 import { CharacterList } from './CharacterList';
+import { CandidatesList } from './CandidatesList';
 
 interface ResultCardProps {
     result: IdentifyResult;
@@ -17,6 +18,7 @@ interface ResultCardProps {
     text: TranslationKeys;
     onReset: () => void;
     uploadedImage: string | null;
+    onSelectCandidate?: (candidate: Candidate) => void;
 }
 
 /**
@@ -24,8 +26,11 @@ interface ResultCardProps {
  * Displays anime identification results with details, preview, and links
  * Refactored to use sub-components for better maintainability
  */
-export function ResultCard({ result, language, text, onReset, uploadedImage }: ResultCardProps) {
+export function ResultCard({ result, language, text, onReset, uploadedImage, onSelectCandidate }: ResultCardProps) {
     if (!result.found || !result.anilist) return null;
+
+    // Filter candidates to exclude the current result
+    const otherCandidates = result.candidates?.filter(c => c.id !== result.anilist?.id) || [];
 
     return (
         <motion.div
@@ -69,7 +74,7 @@ export function ResultCard({ result, language, text, onReset, uploadedImage }: R
                         </section>
 
                         {/* Video Preview */}
-                        <VideoPreview videoUrl={result.video} text={text} trailer={result.anilist.trailer} />
+                        {result.video && <VideoPreview videoUrl={result.video} text={text} trailer={result.anilist.trailer} />}
 
                         {/* Character List */}
                         {result.anilist.characters && result.anilist.characters.length > 0 && (
@@ -82,6 +87,15 @@ export function ResultCard({ result, language, text, onReset, uploadedImage }: R
                         {/* News & Updates Section */}
                         {result.anilist.news && result.anilist.news.length > 0 && (
                             <NewsSection news={result.anilist.news} text={text} />
+                        )}
+
+                        {/* Candidates List */}
+                        {otherCandidates.length > 0 && onSelectCandidate && (
+                            <CandidatesList
+                                candidates={otherCandidates}
+                                onSelect={onSelectCandidate}
+                                text={text}
+                            />
                         )}
                     </div>
 
