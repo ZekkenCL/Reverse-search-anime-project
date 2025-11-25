@@ -125,7 +125,7 @@ export default function Home() {
         <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-radial-[at_50%_50%] from-pink-500/20 to-transparent rounded-full translate-x-1/2 translate-y-1/2" />
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-12 md:py-20 space-y-16 relative z-10">
+      <div className="max-w-7xl mx-auto px-6 py-12 md:py-20 space-y-16 relative z-10">
 
         {/* Top Controls */}
         <div className="absolute top-6 right-6 z-50 flex items-center gap-3">

@@ -57,7 +57,7 @@ export function ResultCard({ result, language, text, onReset, uploadedImage, onS
                 <div className="p-8 md:p-10 pt-20 md:pt-24 grid md:grid-cols-12 gap-10">
 
                     {/* Left Column (Details) */}
-                    <div className="md:col-span-8 space-y-10">
+                    <div className="md:col-span-9 space-y-10">
 
                         {/* Synopsis */}
                         <section className="space-y-4">
@@ -100,7 +100,7 @@ export function ResultCard({ result, language, text, onReset, uploadedImage, onS
                     </div>
 
                     {/* Right Column (Sidebar) */}
-                    <div className="md:col-span-4 space-y-6">
+                    <div className="md:col-span-3 space-y-6">
                         <StreamingLinks result={result} text={text} />
                     </div>
 
