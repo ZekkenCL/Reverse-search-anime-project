@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Newspaper } from 'lucide-react';
 import type { IdentifyResult } from '@/lib/types';
 import type { TranslationKeys } from '@/translations';
@@ -29,7 +30,15 @@ export function NewsSection({ news, text }: NewsSectionProps) {
                     >
                         <div className="flex gap-4">
                             {item.images?.jpg?.image_url && (
-                                <img src={item.images.jpg.image_url} alt="" className="w-16 h-16 object-cover rounded-lg shrink-0" />
+                                <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden">
+                                    <Image
+                                        src={item.images.jpg.image_url}
+                                        alt=""
+                                        fill
+                                        className="object-cover"
+                                        sizes="64px"
+                                    />
+                                </div>
                             )}
                             <div className="flex-1 min-w-0">
                                 <h4 className="text-white font-medium group-hover:text-indigo-300 transition-colors line-clamp-1 mb-1">

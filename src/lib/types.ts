@@ -81,6 +81,7 @@ export interface IdentifyResult {
     to: number;
     video: string;
     image: string;
+    filename?: string;
     anilist: AnilistMedia | null;
 }
 

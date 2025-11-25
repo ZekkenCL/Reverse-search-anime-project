@@ -1,6 +1,9 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 import type { IdentifyResult } from '@/lib/types';
 import type { TranslationKeys } from '@/translations';
 import { formatTime } from '@/lib/utils';
@@ -8,32 +11,87 @@ import { formatTime } from '@/lib/utils';
 interface AnimeHeroProps {
     result: IdentifyResult;
     text: TranslationKeys;
+    uploadedImage: string | null;
 }
 
-export function AnimeHero({ result, text }: AnimeHeroProps) {
+export function AnimeHero({ result, text, uploadedImage }: AnimeHeroProps) {
+    const [showUploaded, setShowUploaded] = useState(false);
+
     if (!result.anilist) return null;
 
     return (
         <div className="relative h-64 md:h-80">
             {result.anilist.bannerImage && (
                 <div className="absolute inset-0">
-                    <img src={result.anilist.bannerImage} alt="Banner" className="w-full h-full object-cover opacity-50" />
+                    <Image
+                        src={result.anilist.bannerImage}
+                        alt="Banner"
+                        fill
+                        className="object-cover opacity-50"
+                        priority
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 via-neutral-900/80 to-transparent" />
                 </div>
             )}
 
             <div className="absolute bottom-0 left-0 w-full p-8 md:p-10 flex flex-col md:flex-row gap-8 items-end">
-                {/* Cover Art */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="shrink-0 w-40 md:w-56 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-neutral-800 -mb-16 md:-mb-20 relative z-10"
-                >
-                    {result.anilist.coverImage?.large && (
-                        <img src={result.anilist.coverImage.large} alt="Cover" className="w-full h-full object-cover" />
-                    )}
-                </motion.div>
+                {/* Cover Art / Comparison View */}
+                <div className="relative group">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="shrink-0 w-40 md:w-56 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-neutral-800 -mb-16 md:-mb-20 relative z-10"
+                    >
+                        <AnimatePresence mode="wait">
+                            {showUploaded && uploadedImage ? (
+                                <motion.div
+                                    key="uploaded"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="w-full h-full relative"
+                                >
+                                    {/* Uploaded image is a blob URL, so we can use standard img or Image with unoptimized */}
+                                    <img
+                                        src={uploadedImage}
+                                        alt="Uploaded"
+                                        className="w-full h-full object-cover"
+                                    />
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="cover"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="w-full h-full relative"
+                                >
+                                    {result.anilist.coverImage?.large && (
+                                        <Image
+                                            src={result.anilist.coverImage.large}
+                                            alt="Cover"
+                                            fill
+                                            className="object-cover"
+                                            priority
+                                        />
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Toggle Button */}
+                        {uploadedImage && (
+                            <button
+                                onClick={() => setShowUploaded(!showUploaded)}
+                                className="absolute bottom-2 right-2 p-2 rounded-full bg-black/60 backdrop-blur-md text-white/80 hover:text-white hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100"
+                                title={showUploaded ? "Show Result Cover" : "Show Uploaded Image"}
+                            >
+                                {showUploaded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        )}
+                    </motion.div>
+                </div>
 
                 {/* Title Info */}
                 <div className="flex-1 space-y-4 mb-2">

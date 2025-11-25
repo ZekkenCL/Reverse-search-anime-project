@@ -37,7 +37,7 @@ export function useAnimeIdentifier() {
                 throw new Error(data.error);
             }
 
-            setResult(data);
+            setResult({ ...data, filename: imageFile.name });
         } catch (err: any) {
             setError(err.message || 'Something went wrong');
         } finally {

@@ -15,6 +15,7 @@ interface ResultCardProps {
     language: Language;
     text: TranslationKeys;
     onReset: () => void;
+    uploadedImage: string | null;
 }
 
 /**
@@ -22,7 +23,7 @@ interface ResultCardProps {
  * Displays anime identification results with details, preview, and links
  * Refactored to use sub-components for better maintainability
  */
-export function ResultCard({ result, language, text, onReset }: ResultCardProps) {
+export function ResultCard({ result, language, text, onReset, uploadedImage }: ResultCardProps) {
     if (!result.found || !result.anilist) return null;
 
     return (
@@ -44,7 +45,7 @@ export function ResultCard({ result, language, text, onReset }: ResultCardProps)
             <div className="bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
 
                 {/* Hero Section */}
-                <AnimeHero result={result} text={text} />
+                <AnimeHero result={result} text={text} uploadedImage={uploadedImage} />
 
                 {/* Content Body */}
                 <div className="p-8 md:p-10 pt-20 md:pt-24 grid md:grid-cols-12 gap-10">
