@@ -530,29 +530,24 @@ export async function POST(req: NextRequest) {
         if (descriptionEN) {
             try {
                 console.log('=== TRANSLATION DEBUG ===');
-                console.log('Original description length:', descriptionEN.length);
 
-                // Remove HTML tags for translation
-                const textToTranslate = descriptionEN.replace(/<[^>]*>/g, '');
-                console.log('Text to translate length:', textToTranslate.length);
+                // Use Google Translate 'gtx' endpoint (more reliable)
+                // We still chunk to be safe, though it handles larger texts better
+                const textToTranslate = descriptionEN.replace(/<br>/g, '\n').replace(/<[^>]*>/g, ''); // Convert breaks to newlines, remove other tags
 
-                // Use MyMemory Translation API with chunking for long texts
-                const maxChunkSize = 450; // Conservative limit to avoid API issues
+                const maxChunkSize = 1000;
                 const chunks: string[] = [];
 
                 if (textToTranslate.length > maxChunkSize) {
-                    // Split by words to ensure complete coverage
-                    const words = textToTranslate.split(' ');
+                    const sentences = textToTranslate.match(/[^.!?]+[.!?]+/g) || [textToTranslate];
                     let currentChunk = '';
 
-                    for (const word of words) {
-                        const testChunk = currentChunk ? `${currentChunk} ${word}` : word;
-
-                        if (testChunk.length > maxChunkSize && currentChunk) {
+                    for (const sentence of sentences) {
+                        if ((currentChunk + sentence).length > maxChunkSize && currentChunk) {
                             chunks.push(currentChunk.trim());
-                            currentChunk = word;
+                            currentChunk = sentence;
                         } else {
-                            currentChunk = testChunk;
+                            currentChunk += sentence;
                         }
                     }
                     if (currentChunk.trim()) {
@@ -562,49 +557,33 @@ export async function POST(req: NextRequest) {
                     chunks.push(textToTranslate);
                 }
 
-                console.log(`Translating ${chunks.length} chunk(s)`);
+                console.log(`Translating ${chunks.length} chunk(s) with Google GTX`);
                 const translatedChunks: string[] = [];
 
-                for (let i = 0; i < chunks.length; i++) {
-                    const chunk = chunks[i];
-                    console.log(`Chunk ${i + 1}/${chunks.length}: ${chunk.length} chars`);
+                for (const chunk of chunks) {
+                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q=${encodeURIComponent(chunk)}`;
 
-                    const translateUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|es`;
-
-                    try {
-                        const translateResponse = await fetch(translateUrl, {
-                            method: 'GET',
-                            headers: { 'Accept': 'application/json' },
-                        });
-
-                        if (translateResponse.ok) {
-                            const translateData = await translateResponse.json();
-
-                            if (translateData.responseStatus === 200 && translateData.responseData?.translatedText) {
-                                translatedChunks.push(translateData.responseData.translatedText);
-                                console.log(`✓ Chunk ${i + 1} translated`);
-                            } else {
-                                console.warn(`✗ Chunk ${i + 1} failed:`, translateData.responseStatus);
-                                translatedChunks.push(chunk);
-                            }
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const data = await response.json();
+                        // data[0] contains the translated sentences
+                        if (data && data[0]) {
+                            const translatedText = data[0].map((item: any) => item[0]).join('');
+                            translatedChunks.push(translatedText);
                         } else {
-                            console.warn(`✗ Chunk ${i + 1} request failed:`, translateResponse.status);
                             translatedChunks.push(chunk);
                         }
-                    } catch (chunkError) {
-                        console.error(`✗ Chunk ${i + 1} error:`, chunkError);
+                    } else {
+                        console.warn('Google Translate failed:', response.status);
                         translatedChunks.push(chunk);
                     }
 
-                    // Delay between requests
-                    if (i < chunks.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 250));
-                    }
+                    // Small delay to be polite
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
 
-                descriptionES = translatedChunks.join(' ');
-                console.log('Translation complete. Result length:', descriptionES.length);
-                console.log('=== END TRANSLATION DEBUG ===');
+                descriptionES = translatedChunks.join(' ').replace(/\n/g, '<br>'); // Restore breaks
+                console.log('Translation complete');
 
             } catch (translateError) {
                 console.error('Translation error:', translateError);
