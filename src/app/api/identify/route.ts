@@ -529,35 +529,86 @@ export async function POST(req: NextRequest) {
         // Translate to Spanish if description exists
         if (descriptionEN) {
             try {
-                // Remove HTML tags for translation but keep track of them
+                console.log('=== TRANSLATION DEBUG ===');
+                console.log('Original description length:', descriptionEN.length);
+
+                // Remove HTML tags for translation
                 const textToTranslate = descriptionEN.replace(/<[^>]*>/g, '');
+                console.log('Text to translate length:', textToTranslate.length);
 
-                // Use MyMemory Translation API (free, reliable, 10k chars/day limit)
-                const translateUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(textToTranslate)}&langpair=en|es`;
+                // Use MyMemory Translation API with chunking for long texts
+                const maxChunkSize = 450; // Conservative limit to avoid API issues
+                const chunks: string[] = [];
 
-                const translateResponse = await fetch(translateUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                    },
-                });
+                if (textToTranslate.length > maxChunkSize) {
+                    // Split by words to ensure complete coverage
+                    const words = textToTranslate.split(' ');
+                    let currentChunk = '';
 
-                if (translateResponse.ok) {
-                    const translateData = await translateResponse.json();
-                    if (translateData.responseStatus === 200 && translateData.responseData?.translatedText) {
-                        descriptionES = translateData.responseData.translatedText;
-                        console.log('Translation successful');
-                    } else {
-                        console.warn('Translation API returned error:', translateData);
-                        descriptionES = descriptionEN;
+                    for (const word of words) {
+                        const testChunk = currentChunk ? `${currentChunk} ${word}` : word;
+
+                        if (testChunk.length > maxChunkSize && currentChunk) {
+                            chunks.push(currentChunk.trim());
+                            currentChunk = word;
+                        } else {
+                            currentChunk = testChunk;
+                        }
+                    }
+                    if (currentChunk.trim()) {
+                        chunks.push(currentChunk.trim());
                     }
                 } else {
-                    console.warn('Translation request failed:', translateResponse.status);
-                    descriptionES = descriptionEN;
+                    chunks.push(textToTranslate);
                 }
+
+                console.log(`Translating ${chunks.length} chunk(s)`);
+                const translatedChunks: string[] = [];
+
+                for (let i = 0; i < chunks.length; i++) {
+                    const chunk = chunks[i];
+                    console.log(`Chunk ${i + 1}/${chunks.length}: ${chunk.length} chars`);
+
+                    const translateUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|es`;
+
+                    try {
+                        const translateResponse = await fetch(translateUrl, {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' },
+                        });
+
+                        if (translateResponse.ok) {
+                            const translateData = await translateResponse.json();
+
+                            if (translateData.responseStatus === 200 && translateData.responseData?.translatedText) {
+                                translatedChunks.push(translateData.responseData.translatedText);
+                                console.log(`✓ Chunk ${i + 1} translated`);
+                            } else {
+                                console.warn(`✗ Chunk ${i + 1} failed:`, translateData.responseStatus);
+                                translatedChunks.push(chunk);
+                            }
+                        } else {
+                            console.warn(`✗ Chunk ${i + 1} request failed:`, translateResponse.status);
+                            translatedChunks.push(chunk);
+                        }
+                    } catch (chunkError) {
+                        console.error(`✗ Chunk ${i + 1} error:`, chunkError);
+                        translatedChunks.push(chunk);
+                    }
+
+                    // Delay between requests
+                    if (i < chunks.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 250));
+                    }
+                }
+
+                descriptionES = translatedChunks.join(' ');
+                console.log('Translation complete. Result length:', descriptionES.length);
+                console.log('=== END TRANSLATION DEBUG ===');
+
             } catch (translateError) {
                 console.error('Translation error:', translateError);
-                descriptionES = descriptionEN; // Fallback to English
+                descriptionES = descriptionEN;
             }
         }
 
@@ -599,7 +650,7 @@ export async function POST(req: NextRequest) {
                 episodes: grandTotalEpisodes,
                 news,
                 trailer: mainSeries.trailer,
-                characters: mainSeries.characters?.edges?.map((edge: any) => ({
+                characters: media.characters?.edges?.map((edge: any) => ({
                     id: edge.node.id,
                     name: edge.node.name,
                     image: edge.node.image,
